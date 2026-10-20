@@ -4,14 +4,15 @@ Finds vinyl (and optionally CD) pressings of songs that are trending on charts o
 TikTok, then follows their Discogs market every day to spot records whose
 **demand is rising and supply is shrinking before the price moves**.
 
-It runs on GitHub Actions once a day for free, commits its history to `data/`, and
-publishes a dashboard to GitHub Pages.
+It runs on GitHub Actions once a day, commits its history to `data/`, and posts its
+results privately: a ranked table on each workflow run's summary page and a
+downloadable dashboard. Optional Telegram alerts are sent to your phone.
 
 ## How it works
 
 ```
 trend sources ──► discover pressings ──► daily Discogs snapshot ──► score ──► dashboard + alerts
-(seeds, Deezer,    (Discogs search,       (lowest price, copies     (0–100,     (GitHub Pages,
+(seeds, Deezer,    (Discogs search,       (lowest price, copies     (0–100,     (run summary,
  Last.fm charts)    most-wanted N)         for sale, have, want)     signal)     Telegram)
 ```
 
@@ -52,9 +53,21 @@ trend sources ──► discover pressings ──► daily Discogs snapshot ─�
    - `LASTFM_API_KEY`: get one from https://www.last.fm/api/account/create
    - `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`: create a bot with @BotFather to get
      "Buy" alerts on your phone. Each release alerts at most once every 14 days.
-3. **GitHub Pages.** Go to **Settings → Pages → Source: GitHub Actions**.
-4. **Merge to the default branch.** Scheduled workflows only run there. Then go to
+3. **Merge to the default branch.** Scheduled workflows only run there. Then go to
    **Actions → Track vinyl prices → Run workflow** to start the first run now.
+
+## Seeing the results (privately)
+
+- **Run summary:** open the latest run under **Actions → Track vinyl prices** to see the top-25 table.
+  Only people with access to the repo can see it.
+- **Full dashboard:** on the same page, download the `dashboard` artifact, unzip it and
+  open `index.html` in your browser. It works offline and includes charts.
+- **Phone:** Telegram alerts (see the optional secrets above).
+
+A GitHub Pages site is **public even when the repo is private**, so Pages is off by
+default. To publish the dashboard anyway, set **Settings → Pages → Source: GitHub
+Actions** and add the repository variable `ENABLE_PAGES` = `true`
+(**Settings → Secrets and variables → Actions → Variables**).
 
 The first day only has one data point, so scores rely on want/have, trends and
 catalog age. Growth and supply signals start showing after a few days and are
@@ -84,8 +97,8 @@ Python 3.10+ only, no dependencies.
 
 ```sh
 DISCOGS_TOKEN=... python -m tracker run   # full run
-python -m tracker build                   # rebuild site/data.json from data/ (offline)
-python -m http.server -d site             # open http://localhost:8000
+python -m tracker build                   # rebuild site/data.js from data/ (offline)
+open site/index.html                      # or just double-click it
 python -m unittest discover -s tests      # tests
 ```
 

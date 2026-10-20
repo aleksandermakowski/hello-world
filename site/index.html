@@ -301,15 +301,19 @@ $("q").addEventListener("input", render);
 $("signal").addEventListener("change", render);
 addEventListener("resize", () => { if (openId != null) render(); });
 
-fetch("data.json", { cache: "no-store" })
-  .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-  .then((d) => {
-    DATA = d;
-    $("foot").textContent = `Updated ${d.generated_at.replace("T", " ")} UTC · prices in ${d.currency} · data from Discogs, Deezer and Last.fm. Not financial advice.`;
-    renderTiles();
-    render();
-  })
-  .catch(() => { $("rows").innerHTML = '<tr><td colspan="10" class="empty">No data yet. The first daily run fills this in.</td></tr>'; });
+addEventListener("DOMContentLoaded", () => {
+  const d = window.TRACKER_DATA;
+  if (!d) {
+    $("rows").innerHTML = '<tr><td colspan="10" class="empty">No data yet. The first daily run fills this in.</td></tr>';
+    return;
+  }
+  DATA = d;
+  $("foot").textContent = `Updated ${d.generated_at.replace("T", " ")} UTC · prices in ${d.currency} · data from Discogs, Deezer and Last.fm. Not financial advice.`;
+  renderTiles();
+  render();
+});
 </script>
+<!-- data.js is written by `python -m tracker run|build`; a <script> (not fetch) also works when opened from disk. -->
+<script src="data.js"></script>
 </body>
 </html>

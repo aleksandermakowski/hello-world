@@ -25,7 +25,7 @@ class Paths:
         self.discovered = os.path.join(root, "data", "discovered.json")
         self.releases = os.path.join(root, "data", "releases.json")
         self.alerts = os.path.join(root, "data", "alerts.json")
-        self.site_data = os.path.join(root, "site", "data.json")
+        self.site_data = os.path.join(root, "site", "data.js")
 
 
 def load_config(paths):
@@ -164,7 +164,7 @@ def trend_info_by_track(trend_rows, today):
 
 
 def build_site_data(cfg, paths, today):
-    """Score everything we have history for and write site/data.json for the dashboard."""
+    """Score everything we have history for and write site/data.js for the dashboard."""
     series = storage.snapshot_series(paths.snapshots)
     meta_all = storage.load_json(paths.releases, {})
     discovered = storage.load_json(paths.discovered, {})
@@ -212,7 +212,7 @@ def build_site_data(cfg, paths, today):
         "currency": cfg["currency"],
         "releases": items,
     }
-    storage.save_json(paths.site_data, data)
+    storage.save_js(paths.site_data, "TRACKER_DATA", data)
     return data
 
 

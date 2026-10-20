@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from tracker import pipeline, storage
 from tracker.alerts import format_alert, pending_alerts
 from tracker.discogs import Discogs, clean_artist
+from tracker.report import markdown_summary
 from tracker.scoring import changes, score_release
 
 RELEASE_JSON = {
@@ -143,6 +144,12 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(len(pending_alerts(data["releases"], {}, "2026-01-31")), 1)
         self.assertEqual(pending_alerts(data["releases"], {"101": "2026-01-30"}, "2026-01-31"), [])
         self.assertIn("Fleetwood Mac – Rumours", format_alert(item))
+
+        summary = markdown_summary(data)
+        self.assertIn("**1 buy**", summary)
+        self.assertIn("| [Fleetwood Mac – Rumours](https://www.discogs.com/release/101-Rumours) (1977) | 🟢 Buy |", summary)
+        with open(self.paths.site_data) as f:
+            self.assertTrue(f.read().startswith("window.TRACKER_DATA = {"))
 
     def test_rerun_same_day_is_idempotent(self):
         self.run_day("2026-01-01", [])

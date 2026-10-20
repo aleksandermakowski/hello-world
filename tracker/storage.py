@@ -25,6 +25,13 @@ def save_json(path, data):
     os.replace(tmp, path)
 
 
+def save_js(path, var_name, data):
+    """Write data as a <script>-loadable file, so the dashboard also works opened from disk (file://)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"window.{var_name} = {json.dumps(data, ensure_ascii=False)};\n")
+
+
 def read_csv(path):
     if not os.path.exists(path):
         return []

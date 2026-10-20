@@ -1,5 +1,5 @@
 __pycache__/
 *.pyc
 *.tmp
-# Generated on every run and deployed to Pages; history lives in data/.
-site/data.json
+# Generated on every run and shipped with the dashboard; history lives in data/.
+site/data.js

@@ -1,7 +1,7 @@
 """CLI.
 
     python -m tracker run     # full daily run (needs DISCOGS_TOKEN)
-    python -m tracker build   # rebuild site/data.json from stored data only (no network)
+    python -m tracker build   # rebuild site/data.js from stored data only (no network)
 """
 
 import argparse
@@ -12,6 +12,7 @@ from datetime import date
 from . import pipeline
 from .alerts import send_alerts
 from .discogs import Discogs
+from .report import markdown_summary
 
 
 def main(argv=None):
@@ -37,6 +38,10 @@ def main(argv=None):
 
     data = pipeline.build_site_data(cfg, paths, today)
     print(f"site: {len(data['releases'])} releases scored")
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with open(summary_path, "a", encoding="utf-8") as f:
+            f.write(markdown_summary(data))
 
     if args.command == "run":
         send_alerts(
