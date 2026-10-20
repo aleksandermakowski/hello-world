@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vinyl Trend Tracker</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f4f2;
+    --surface-1: #fcfcfb;
+    --border: #e2e1dc;
+    --grid: #ebeae6;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7973;
+    --series-1: #2a78d6;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --hover: #f0efeb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --bg: #121211;
+      --surface-1: #1a1a19;
+      --border: #2e2e2c;
+      --grid: #262624;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #8f8e86;
+      --series-1: #3987e5;
+      --hover: #232321;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface-1: #1a1a19;
+    --border: #2e2e2c;
+    --grid: #262624;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --series-1: #3987e5;
+    --hover: #232321;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text-primary);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--text-secondary); margin: 0 0 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .tile .label { color: var(--text-secondary); font-size: 12px; }
+  .tile .value { font-size: 26px; font-weight: 600; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .filters input, .filters select {
+    font: inherit; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+  }
+  .filters input { flex: 1 1 220px; }
+  .table-wrap { overflow-x: auto; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 860px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  th { font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; user-select: none; white-space: nowrap; }
+  th[aria-sort="descending"]::after { content: " ↓"; }
+  th[aria-sort="ascending"]::after { content: " ↑"; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr.open { background: var(--hover); }
+  .rel { display: flex; gap: 10px; align-items: center; min-width: 240px; }
+  .rel img { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; background: var(--grid); flex: none; }
+  .rel .t { font-weight: 600; }
+  .rel .m { color: var(--text-muted); font-size: 12px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); white-space: nowrap; }
+  .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dot); }
+  .badge.buy { --dot: var(--good); }
+  .badge.watch { --dot: var(--warning); }
+  .badge.moved { --dot: var(--serious); }
+  .up { color: var(--text-primary); }
+  .muted { color: var(--text-muted); }
+  .detail td { background: var(--surface-1); cursor: default; padding: 16px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .chart h3 { font-size: 13px; margin: 0 0 6px; }
+  .chart svg { width: 100%; height: 140px; display: block; overflow: visible; }
+  .chart .axis { fill: var(--text-muted); font-size: 10px; }
+  .chart .gridline { stroke: var(--grid); stroke-width: 1; }
+  .chart .line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .chart .dot { fill: var(--series-1); stroke: var(--surface-1); stroke-width: 2; }
+  .chart .cross { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .tip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 14px; color: var(--text-secondary); font-size: 12px; }
+  .facts b { color: var(--text-primary); font-weight: 600; }
+  .empty { padding: 32px; text-align: center; color: var(--text-secondary); }
+  footer { margin-top: 16px; color: var(--text-muted); font-size: 12px; }
+  a { color: var(--series-1); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Vinyl Trend Tracker</h1>
+  <p class="sub">Pressings of songs trending on charts and TikTok, ranked by rising Discogs demand, shrinking supply and prices that haven't moved yet.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="filters">
+    <input id="q" type="search" placeholder="Search artist, title or song…" aria-label="Search">
+    <select id="signal" aria-label="Signal">
+      <option value="">All signals</option>
+      <option value="buy">Buy</option>
+      <option value="watch">Watch</option>
+      <option value="moved">Already moved</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-key="artist">Release</th>
+          <th data-key="signal">Signal</th>
+          <th data-key="score" class="num" aria-sort="descending">Score</th>
+          <th data-key="lowest_price" class="num">Lowest price</th>
+          <th data-key="num_for_sale" class="num">For sale</th>
+          <th data-key="want_have" class="num">Want / have</th>
+          <th data-key="want30" class="num">Wants 30d</th>
+          <th data-key="supply30" class="num">Supply 30d</th>
+          <th data-key="price30" class="num">Price 30d</th>
+          <th data-key="songs">Trending song</th>
+        </tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <footer id="foot"></footer>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+const SIGNAL_LABEL = { buy: "Buy", watch: "Watch", moved: "Already moved", "": "—" };
+const SIGNAL_ORDER = { buy: 3, watch: 2, moved: 1, "": 0 };
+let DATA = { releases: [] };
+let sortKey = "score", sortDir = -1, openId = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (v, cur) => v == null ? "—" : new Intl.NumberFormat(undefined, { style: "currency", currency: cur || "USD" }).format(v);
+const pct = (v) => v == null ? '<span class="muted">—</span>' : `${v > 0 ? "+" : ""}${(v * 100).toFixed(0)}%`;
+const num = (v) => v == null ? "—" : v.toLocaleString();
+
+function sortValue(r, key) {
+  switch (key) {
+    case "signal": return SIGNAL_ORDER[r.signal] ?? 0;
+    case "want30": return r.change_30d.want ?? -Infinity;
+    case "supply30": return r.change_30d.for_sale ?? Infinity;
+    case "price30": return r.change_30d.price ?? -Infinity;
+    case "songs": return (r.songs[0] || "").toLowerCase();
+    case "artist": return `${r.artist} ${r.title}`.toLowerCase();
+    default: return r[key] ?? -Infinity;
+  }
+}
+
+function filtered() {
+  const q = $("q").value.trim().toLowerCase();
+  const sig = $("signal").value;
+  return DATA.releases
+    .filter((r) => !sig || r.signal === sig)
+    .filter((r) => !q || `${r.artist} ${r.title} ${r.songs.join(" ")}`.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const x = sortValue(a, sortKey), y = sortValue(b, sortKey);
+      return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
+    });
+}
+
+function renderTiles() {
+  const rs = DATA.releases;
+  const count = (s) => rs.filter((r) => r.signal === s).length;
+  const tiles = [
+    ["Tracked pressings", rs.length],
+    ["Buy signals", count("buy")],
+    ["Watching", count("watch")],
+    ["Already moved", count("moved")],
+  ];
+  $("tiles").innerHTML = tiles.map(([l, v]) => `<div class="tile"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("");
+}
+
+function render() {
+  const rows = filtered();
+  document.querySelectorAll("th").forEach((th) => {
+    th.removeAttribute("aria-sort");
+    if (th.dataset.key === sortKey) th.setAttribute("aria-sort", sortDir < 0 ? "descending" : "ascending");
+  });
+  if (!rows.length) {
+    $("rows").innerHTML = `<tr><td colspan="10" class="empty">${DATA.releases.length ? "No releases match these filters." : "No data yet. The first daily run fills this in."}</td></tr>`;
+    return;
+  }
+  $("rows").innerHTML = rows.map((r) => {
+    const main = `<tr data-id="${r.id}" class="${r.id === openId ? "open" : ""}">
+      <td><div class="rel">${r.thumb ? `<img src="${esc(r.thumb)}" alt="" loading="lazy">` : "<img alt=\"\">"}
+        <div><div class="t">${esc(r.artist)} – ${esc(r.title)}</div>
+        <div class="m">${esc(r.year || "?")} · ${esc(r.country)} · ${esc(r.formats)}</div></div></div></td>
+      <td><span class="badge ${r.signal}">${SIGNAL_LABEL[r.signal]}</span></td>
+      <td class="num"><b>${r.score.toFixed(0)}</b></td>
+      <td class="num">${money(r.lowest_price, r.currency)}</td>
+      <td class="num">${num(r.num_for_sale)}</td>
+      <td class="num">${r.want_have == null ? "—" : r.want_have.toFixed(2)}</td>
+      <td class="num">${pct(r.change_30d.want)}</td>
+      <td class="num">${pct(r.change_30d.for_sale)}</td>
+      <td class="num">${pct(r.change_30d.price)}</td>
+      <td>${r.songs.length ? esc(r.songs[0]) : '<span class="muted">watchlist</span>'}</td>
+    </tr>`;
+    return main + (r.id === openId ? detailRow(r) : "");
+  }).join("");
+  if (openId != null) drawCharts(rows.find((r) => r.id === openId));
+}
+
+function detailRow(r) {
+  const parts = Object.entries(r.parts).map(([k, v]) => `${k.replace("_", " ")} <b>${v}</b>`).join(" · ");
+  const trend = r.trend ? `${r.trend.sources.join(", ")}${r.trend.best_rank ? ` (best rank #${r.trend.best_rank})` : ""}` : "none in the last 7 days";
+  return `<tr class="detail"><td colspan="10">
+    <p class="facts"><span>Score breakdown: ${parts}${r.penalty ? ` · penalty <b>−${r.penalty}</b>` : ""}</span>
+      <span>Trend sources: <b>${esc(trend)}</b></span>
+      ${r.note ? `<span>Note: <b>${esc(r.note)}</b></span>` : ""}
+      <span><a href="${esc(r.url)}" target="_blank" rel="noopener">Open on Discogs ↗</a></span></p>
+    <div class="charts">
+      <div class="chart"><h3>Lowest price (${esc(r.currency)})</h3><svg data-metric="price"></svg></div>
+      <div class="chart"><h3>Wants</h3><svg data-metric="want"></svg></div>
+      <div class="chart"><h3>Copies for sale</h3><svg data-metric="for_sale"></svg></div>
+    </div></td></tr>`;
+}
+
+function drawCharts(r) {
+  document.querySelectorAll(".detail svg").forEach((svg) => lineChart(svg, r.history, svg.dataset.metric, r.currency));
+}
+
+function lineChart(svg, history, metric, currency) {
+  const pts = history.filter((p) => p[metric] != null);
+  const W = svg.clientWidth || 300, H = 140, L = 44, R = 8, T = 8, B = 20;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  if (pts.length < 2) {
+    svg.innerHTML = `<text class="axis" x="${L}" y="${H / 2}">Needs a few days of history</text>`;
+    return;
+  }
+  const fmt = metric === "price" ? (v) => money(v, currency) : (v) => num(Math.round(v));
+  let lo = Math.min(...pts.map((p) => p[metric])), hi = Math.max(...pts.map((p) => p[metric]));
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.1; lo = Math.max(0, lo - pad); hi += pad;
+  const t0 = Date.parse(pts[0].date), t1 = Date.parse(pts[pts.length - 1].date);
+  const x = (d) => L + ((Date.parse(d) - t0) / (t1 - t0)) * (W - L - R);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const ticks = [lo, (lo + hi) / 2, hi];
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${x(p.date).toFixed(1)},${y(p[metric]).toFixed(1)}`).join("");
+  const last = pts[pts.length - 1];
+  svg.innerHTML =
+    ticks.map((v) => `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${fmt(v)}</text>`).join("") +
+    `<text class="axis" x="${L}" y="${H - 4}">${pts[0].date}</text><text class="axis" x="${W - R}" y="${H - 4}" text-anchor="end">${last.date}</text>` +
+    `<path class="line" d="${path}"/>` +
+    `<circle class="dot" cx="${x(last.date)}" cy="${y(last[metric])}" r="4"/>` +
+    `<line class="cross" y1="${T}" y2="${H - B}" style="display:none"/><circle class="dot hover" r="4" style="display:none"/>` +
+    `<rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/>`;
+  const cross = svg.querySelector(".cross"), hov = svg.querySelector(".hover"), tip = $("tip");
+  svg.onmousemove = (e) => {
+    const box = svg.getBoundingClientRect();
+    const mx = (e.clientX - box.left) * (W / box.width);
+    const p = pts.reduce((a, b) => Math.abs(x(b.date) - mx) < Math.abs(x(a.date) - mx) ? b : a);
+    cross.setAttribute("x1", x(p.date)); cross.setAttribute("x2", x(p.date)); cross.style.display = "";
+    hov.setAttribute("cx", x(p.date)); hov.setAttribute("cy", y(p[metric])); hov.style.display = "";
+    tip.innerHTML = `${p.date}<br><b>${fmt(p[metric])}</b>`;
+    tip.style.display = "block";
+    tip.style.left = `${Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8)}px`;
+    tip.style.top = `${e.clientY + 12}px`;
+  };
+  svg.onmouseleave = () => { cross.style.display = hov.style.display = tip.style.display = "none"; };
+}
+
+document.querySelector("thead").addEventListener("click", (e) => {
+  const key = e.target.closest("th")?.dataset.key;
+  if (!key) return;
+  sortDir = key === sortKey ? -sortDir : (key === "artist" || key === "songs" || key === "supply30" ? 1 : -1);
+  sortKey = key;
+  render();
+});
+$("rows").addEventListener("click", (e) => {
+  if (e.target.closest("a") || e.target.closest(".detail")) return;
+  const tr = e.target.closest("tr[data-id]");
+  if (!tr) return;
+  const id = Number(tr.dataset.id);
+  openId = openId === id ? null : id;
+  render();
+});
+$("q").addEventListener("input", render);
+$("signal").addEventListener("change", render);
+addEventListener("resize", () => { if (openId != null) render(); });
+
+addEventListener("DOMContentLoaded", () => {
+  const d = window.TRACKER_DATA;
+  if (!d) {
+    $("rows").innerHTML = '<tr><td colspan="10" class="empty">No data yet. The first daily run fills this in.</td></tr>';
+    return;
+  }
+  DATA = d;
+  $("foot").textContent = `Updated ${d.generated_at.replace("T", " ")} UTC · prices in ${d.currency} · data from Discogs, Deezer and Last.fm. Not financial advice.`;
+  renderTiles();
+  render();
+});
+</script>
+<!-- data.js is written by `python -m tracker run|build`; a <script> (not fetch) also works when opened from disk. -->
+<script src="data.js"></script>
+</body>
+</html>

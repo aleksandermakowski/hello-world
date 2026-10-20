@@ -1,0 +1,67 @@
+name: Track vinyl prices
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write # commit the new data snapshot
+
+concurrency:
+  group: tracker
+  cancel-in-progress: false
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Also writes the top-25 table to this run's summary page (private to repo members).
+      - name: Collect trends, snapshot Discogs, score
+        run: python -m tracker run
+        env:
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "data: snapshot $(date -u +%F)"
+          git push
+
+      # Private dashboard: download the zip from the run page and open index.html.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dashboard
+          path: site
+          retention-days: 30
+
+      - if: vars.ENABLE_PAGES == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  # Opt-in only: a GitHub Pages site is PUBLIC even when the repo is private.
+  pages:
+    if: vars.ENABLE_PAGES == 'true'
+    needs: track
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,19 @@
+{
+  "currency": "USD",
+  "formats": ["Vinyl"],
+  "discovery": {
+    "releases_per_track": 3,
+    "min_want": 25,
+    "max_searches_per_run": 40,
+    "research_after_days": 30,
+    "drop_after_days": 60
+  },
+  "releases": [],
+  "seeds": [
+    {"artist": "Fleetwood Mac", "title": "Dreams", "note": "2020 TikTok revival, good backtest case"},
+    {"artist": "Kate Bush", "title": "Running Up That Hill (A Deal With God)", "note": "2022 Stranger Things / TikTok"},
+    {"artist": "Cigarettes After Sex", "title": "Apocalypse", "note": "long-running TikTok sound"},
+    {"artist": "The Cranberries", "title": "Linger", "note": "catalog track with recurring TikTok use"},
+    {"artist": "Mazzy Star", "title": "Fade Into You", "note": "catalog track with recurring TikTok use"}
+  ]
+}
